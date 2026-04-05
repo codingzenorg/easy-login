@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"strings"
 
 	"easy-login/server/application"
 	"easy-login/server/domain"
 )
 
 type Handler struct {
-	service application.Service
+	service        application.Service
+	allowedOrigins map[string]struct{}
 }
 
 type createGuestIdentityRequest struct {
@@ -26,7 +29,10 @@ type errorResponse struct {
 }
 
 func NewHandler(service application.Service) Handler {
-	return Handler{service: service}
+	return Handler{
+		service:        service,
+		allowedOrigins: loadAllowedOrigins(),
+	}
 }
 
 func (h Handler) Routes() http.Handler {
@@ -35,7 +41,7 @@ func (h Handler) Routes() http.Handler {
 	mux.HandleFunc("POST /identities/resume", h.resumeIdentity)
 	mux.HandleFunc("GET /healthz", h.healthz)
 	mux.HandleFunc("GET /readyz", h.readyz)
-	return mux
+	return h.withCORS(mux)
 }
 
 func (h Handler) createGuestIdentity(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +94,50 @@ func (h Handler) healthz(w http.ResponseWriter, _ *http.Request) {
 
 func (h Handler) readyz(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h Handler) withCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			if _, ok := h.allowedOrigins[origin]; ok {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Vary", "Origin")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			}
+		}
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func loadAllowedOrigins() map[string]struct{} {
+	configured := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if strings.TrimSpace(configured) == "" {
+		configured = strings.Join([]string{
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+			"http://localhost:4173",
+			"http://127.0.0.1:4173",
+		}, ",")
+	}
+
+	allowedOrigins := map[string]struct{}{}
+	for _, origin := range strings.Split(configured, ",") {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed == "" {
+			continue
+		}
+		allowedOrigins[trimmed] = struct{}{}
+	}
+
+	return allowedOrigins
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, payload any) {

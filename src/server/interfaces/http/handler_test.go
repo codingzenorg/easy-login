@@ -45,6 +45,7 @@ func TestCreateGuestIdentityEndpoint(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodPost, "/identities/guest", bytes.NewBufferString(`{"display_name":"henrique"}`))
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Origin", "http://localhost:5173")
 
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, request)
@@ -64,6 +65,10 @@ func TestCreateGuestIdentityEndpoint(t *testing.T) {
 
 	if body["device_token"] != "device-001" {
 		t.Fatalf("expected device token, got %q", body["device_token"])
+	}
+
+	if recorder.Header().Get("Access-Control-Allow-Origin") != "http://localhost:5173" {
+		t.Fatalf("expected cors header to echo allowed origin, got %q", recorder.Header().Get("Access-Control-Allow-Origin"))
 	}
 }
 
@@ -93,5 +98,25 @@ func TestHealthAndReadyEndpoints(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("expected %s to return 200 OK, got %d", path, recorder.Code)
 		}
+	}
+}
+
+func TestOptionsPreflightReturnsNoContentForAllowedOrigin(t *testing.T) {
+	handler := testHandler()
+
+	request := httptest.NewRequest(http.MethodOptions, "/identities/guest", nil)
+	request.Header.Set("Origin", "http://localhost:5173")
+	request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+	request.Header.Set("Access-Control-Request-Headers", "Content-Type")
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 No Content, got %d", recorder.Code)
+	}
+
+	if recorder.Header().Get("Access-Control-Allow-Origin") != "http://localhost:5173" {
+		t.Fatalf("expected allowed origin in preflight response, got %q", recorder.Header().Get("Access-Control-Allow-Origin"))
 	}
 }
