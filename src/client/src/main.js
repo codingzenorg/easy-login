@@ -9,6 +9,7 @@ const apiBaseUrl =
 const state = {
   apiBaseUrl,
   displayName: "",
+  recoveryPassphrase: "",
   deviceToken: window.localStorage.getItem(storageKey) || "",
   identity: null,
   error: "",
@@ -73,6 +74,38 @@ async function resumeIdentity() {
   }
 }
 
+async function claimIdentity() {
+  if (!state.deviceToken) {
+    return
+  }
+
+  state.loading = true
+  state.error = ""
+
+  try {
+    const response = await fetch(`${state.apiBaseUrl}/identities/claim`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        device_token: state.deviceToken,
+        recovery_passphrase: state.recoveryPassphrase,
+      }),
+    })
+
+    const body = await response.json()
+    if (!response.ok) {
+      throw new Error(body.error || "claim failed")
+    }
+
+    state.identity = body
+  } catch (error) {
+    state.error = error.message
+  } finally {
+    state.loading = false
+    m.redraw()
+  }
+}
+
 const App = {
   oninit() {
     void resumeIdentity()
@@ -105,6 +138,27 @@ const App = {
         ),
         state.deviceToken
           ? m("button.button.secondary", {disabled: state.loading, onclick: () => void resumeIdentity()}, "Resume from device token")
+          : null,
+        state.identity && state.identity.claim_status === "guest"
+          ? [
+              m("label.label", {for: "recovery_passphrase"}, "Recovery passphrase"),
+              m("input.input", {
+                id: "recovery_passphrase",
+                value: state.recoveryPassphrase,
+                oninput: (event) => {
+                  state.recoveryPassphrase = event.target.value
+                },
+                placeholder: "moon-river-42",
+              }),
+              m(
+                "button.button.secondary",
+                {
+                  disabled: state.loading,
+                  onclick: () => void claimIdentity(),
+                },
+                "Claim identity",
+              ),
+            ]
           : null,
         state.error ? m("p.error", state.error) : null,
       ]),

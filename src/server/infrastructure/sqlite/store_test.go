@@ -144,3 +144,70 @@ func TestStoreReadsPersistedPlayerByID(t *testing.T) {
 		t.Fatalf("expected persisted display name, got %q", saved.DisplayName)
 	}
 }
+
+func TestClaimedStatusPersistsAcrossStoreRecreation(t *testing.T) {
+	databasePath := filepath.Join(t.TempDir(), "claimed.db")
+
+	db, err := sqlite.OpenDatabase(databasePath)
+	if err != nil {
+		t.Fatalf("open sqlite database: %v", err)
+	}
+
+	store, err := sqlite.NewStore(db)
+	if err != nil {
+		t.Fatalf("create sqlite store: %v", err)
+	}
+
+	service := application.NewService(
+		store,
+		store,
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	created, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("create guest identity: %v", err)
+	}
+
+	_, err = service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("claim guest identity: %v", err)
+	}
+
+	if err := store.Close(); err != nil {
+		t.Fatalf("close sqlite store: %v", err)
+	}
+
+	db, err = sqlite.OpenDatabase(databasePath)
+	if err != nil {
+		t.Fatalf("reopen sqlite database: %v", err)
+	}
+
+	reopenedStore, err := sqlite.NewStore(db)
+	if err != nil {
+		t.Fatalf("recreate sqlite store: %v", err)
+	}
+	defer reopenedStore.Close()
+
+	resumeService := application.NewService(
+		reopenedStore,
+		reopenedStore,
+		fixedPlayerIDGenerator{value: "unused"},
+		fixedDeviceTokenGenerator{value: "unused"},
+	)
+
+	resumed, err := resumeService.ResumeIdentityFromDeviceToken(context.Background(), created.DeviceToken)
+	if err != nil {
+		t.Fatalf("resume claimed identity: %v", err)
+	}
+
+	if resumed.ClaimStatus != domain.ClaimStatusClaimed {
+		t.Fatalf("expected claimed status after restart, got %q", resumed.ClaimStatus)
+	}
+}

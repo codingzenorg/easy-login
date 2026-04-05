@@ -8,6 +8,7 @@ import (
 )
 
 var ErrIdentityNotFound = errors.New("identity not found")
+var ErrIdentityAlreadyClaimed = errors.New("identity already claimed")
 
 type PlayerRepository interface {
 	Save(ctx context.Context, player domain.Player) error
@@ -40,6 +41,11 @@ type Service struct {
 
 type CreateGuestIdentityInput struct {
 	DisplayName string
+}
+
+type ClaimGuestIdentityInput struct {
+	DeviceToken        string
+	RecoveryPassphrase string
 }
 
 type IdentityView struct {
@@ -121,5 +127,35 @@ func (s Service) ResumeIdentityFromDeviceToken(ctx context.Context, deviceToken 
 		PlayerID:    player.PlayerID,
 		DisplayName: player.DisplayName,
 		ClaimStatus: player.ClaimStatus,
+	}, nil
+}
+
+func (s Service) ClaimGuestIdentity(ctx context.Context, input ClaimGuestIdentityInput) (IdentityView, error) {
+	registration, err := s.devices.GetByDeviceToken(ctx, input.DeviceToken)
+	if err != nil {
+		return IdentityView{}, ErrIdentityNotFound
+	}
+
+	player, err := s.players.GetByID(ctx, registration.PlayerID)
+	if err != nil {
+		return IdentityView{}, ErrIdentityNotFound
+	}
+
+	claimedPlayer, err := player.Claim(input.RecoveryPassphrase)
+	if err != nil {
+		if errors.Is(err, domain.ErrIdentityAlreadyClaimed) {
+			return IdentityView{}, ErrIdentityAlreadyClaimed
+		}
+		return IdentityView{}, err
+	}
+
+	if err := s.players.Save(ctx, claimedPlayer); err != nil {
+		return IdentityView{}, err
+	}
+
+	return IdentityView{
+		PlayerID:    claimedPlayer.PlayerID,
+		DisplayName: claimedPlayer.DisplayName,
+		ClaimStatus: claimedPlayer.ClaimStatus,
 	}, nil
 }

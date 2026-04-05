@@ -50,7 +50,8 @@ func (s *Store) Initialize(ctx context.Context) error {
 		`CREATE TABLE IF NOT EXISTS players (
 			player_id TEXT PRIMARY KEY,
 			display_name TEXT NOT NULL,
-			claim_status TEXT NOT NULL
+			claim_status TEXT NOT NULL,
+			recovery_passphrase_hash TEXT NOT NULL DEFAULT ''
 		);`,
 		`CREATE TABLE IF NOT EXISTS device_registrations (
 			device_token TEXT PRIMARY KEY,
@@ -65,17 +66,22 @@ func (s *Store) Initialize(ctx context.Context) error {
 		}
 	}
 
+	if err := ensureColumn(ctx, s.db, "players", "recovery_passphrase_hash", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (s *Store) Save(ctx context.Context, player domain.Player) error {
 	_, err := s.db.ExecContext(
 		ctx,
-		`INSERT OR REPLACE INTO players (player_id, display_name, claim_status)
-		 VALUES (?, ?, ?)`,
+		`INSERT OR REPLACE INTO players (player_id, display_name, claim_status, recovery_passphrase_hash)
+		 VALUES (?, ?, ?, ?)`,
 		player.PlayerID,
 		player.DisplayName,
 		player.ClaimStatus,
+		player.RecoveryPassphraseHash,
 	)
 	return err
 }
@@ -94,11 +100,12 @@ func (s *Store) SaveGuestIdentity(ctx context.Context, player domain.Player, reg
 
 	if _, err = tx.ExecContext(
 		ctx,
-		`INSERT OR REPLACE INTO players (player_id, display_name, claim_status)
-		 VALUES (?, ?, ?)`,
+		`INSERT OR REPLACE INTO players (player_id, display_name, claim_status, recovery_passphrase_hash)
+		 VALUES (?, ?, ?, ?)`,
 		player.PlayerID,
 		player.DisplayName,
 		player.ClaimStatus,
+		player.RecoveryPassphraseHash,
 	); err != nil {
 		return err
 	}
@@ -119,14 +126,14 @@ func (s *Store) SaveGuestIdentity(ctx context.Context, player domain.Player, reg
 func (s *Store) GetByID(ctx context.Context, playerID string) (domain.Player, error) {
 	row := s.db.QueryRowContext(
 		ctx,
-		`SELECT player_id, display_name, claim_status
+		`SELECT player_id, display_name, claim_status, recovery_passphrase_hash
 		 FROM players
 		 WHERE player_id = ?`,
 		playerID,
 	)
 
 	var player domain.Player
-	if err := row.Scan(&player.PlayerID, &player.DisplayName, &player.ClaimStatus); err != nil {
+	if err := row.Scan(&player.PlayerID, &player.DisplayName, &player.ClaimStatus, &player.RecoveryPassphraseHash); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.Player{}, ErrNotFound
 		}
@@ -173,4 +180,37 @@ func (s *Store) GetByDeviceToken(ctx context.Context, deviceToken string) (domai
 
 func (s *Store) Close() error {
 	return s.db.Close()
+}
+
+func ensureColumn(ctx context.Context, db *sql.DB, tableName string, columnName string, definition string) error {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s);", tableName))
+	if err != nil {
+		return fmt.Errorf("read sqlite table info: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name string
+		var dataType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &pk); err != nil {
+			return fmt.Errorf("scan sqlite table info: %w", err)
+		}
+		if name == columnName {
+			return nil
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate sqlite table info: %w", err)
+	}
+
+	if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s;", tableName, columnName, definition)); err != nil {
+		return fmt.Errorf("add sqlite column: %w", err)
+	}
+
+	return nil
 }

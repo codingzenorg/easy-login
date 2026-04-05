@@ -24,6 +24,11 @@ type resumeIdentityRequest struct {
 	DeviceToken string `json:"device_token"`
 }
 
+type claimGuestIdentityRequest struct {
+	DeviceToken        string `json:"device_token"`
+	RecoveryPassphrase string `json:"recovery_passphrase"`
+}
+
 type errorResponse struct {
 	Error string `json:"error"`
 }
@@ -39,6 +44,7 @@ func (h Handler) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /identities/guest", h.createGuestIdentity)
 	mux.HandleFunc("POST /identities/resume", h.resumeIdentity)
+	mux.HandleFunc("POST /identities/claim", h.claimGuestIdentity)
 	mux.HandleFunc("GET /healthz", h.healthz)
 	mux.HandleFunc("GET /readyz", h.readyz)
 	return h.withCORS(mux)
@@ -82,6 +88,34 @@ func (h Handler) resumeIdentity(w http.ResponseWriter, r *http.Request) {
 		}
 
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (h Handler) claimGuestIdentity(w http.ResponseWriter, r *http.Request) {
+	var request claimGuestIdentityRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid json body"})
+		return
+	}
+
+	response, err := h.service.ClaimGuestIdentity(r.Context(), application.ClaimGuestIdentityInput{
+		DeviceToken:        request.DeviceToken,
+		RecoveryPassphrase: request.RecoveryPassphrase,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, application.ErrIdentityNotFound):
+			writeJSON(w, http.StatusNotFound, errorResponse{Error: "identity not found"})
+		case errors.Is(err, application.ErrIdentityAlreadyClaimed):
+			writeJSON(w, http.StatusConflict, errorResponse{Error: "identity already claimed"})
+		case errors.Is(err, domain.ErrInvalidRecoveryPassphrase):
+			writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
+		default:
+			writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
+		}
 		return
 	}
 

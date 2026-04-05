@@ -119,3 +119,91 @@ func TestResumeIdentityFromUnknownDeviceTokenReturnsNotFound(t *testing.T) {
 		t.Fatal("expected missing device token to fail")
 	}
 }
+
+func TestClaimGuestIdentityChangesClaimStatusToClaimed(t *testing.T) {
+	service := application.NewService(
+		memory.NewPlayerRepository(),
+		memory.NewDeviceRegistrationRepository(),
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	created, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("expected guest identity creation to succeed: %v", err)
+	}
+
+	claimed, err := service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("expected claim to succeed: %v", err)
+	}
+
+	if claimed.PlayerID != created.PlayerID {
+		t.Fatalf("expected claim to preserve player id, got %q", claimed.PlayerID)
+	}
+
+	if claimed.ClaimStatus != domain.ClaimStatusClaimed {
+		t.Fatalf("expected claimed status, got %q", claimed.ClaimStatus)
+	}
+}
+
+func TestClaimGuestIdentityRejectsEmptyPassphrase(t *testing.T) {
+	service := application.NewService(
+		memory.NewPlayerRepository(),
+		memory.NewDeviceRegistrationRepository(),
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	created, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("expected guest identity creation to succeed: %v", err)
+	}
+
+	_, err = service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "   ",
+	})
+	if err == nil {
+		t.Fatal("expected empty passphrase to be rejected")
+	}
+}
+
+func TestClaimGuestIdentityRejectsAlreadyClaimedIdentity(t *testing.T) {
+	service := application.NewService(
+		memory.NewPlayerRepository(),
+		memory.NewDeviceRegistrationRepository(),
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	created, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("expected guest identity creation to succeed: %v", err)
+	}
+
+	_, err = service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("expected first claim to succeed: %v", err)
+	}
+
+	_, err = service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "other-passphrase",
+	})
+	if err == nil {
+		t.Fatal("expected second claim to fail")
+	}
+}
