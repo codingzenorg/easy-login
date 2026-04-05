@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.env
+.python-version
+runs/
+.codex
+.codex/
+.codex-session
+.notes
+.DS_Store
