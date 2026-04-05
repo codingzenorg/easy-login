@@ -28,12 +28,12 @@ The MRL core defines:
 
 Implementation shape is selected through a pack.
 
-This repository currently adopts the `python_ddd_monolith` pack. Other repositories may instead adopt:
+This repository currently adopts the `polyglot_client_server` pack. Other repositories may instead adopt:
 
+- `python_ddd_monolith`
 - `typescript_application`
 - `go_service`
 - `event_sourced_domain`
-- `polyglot_client_server`
 
 If a repository changes pack, record the decision in `decisions.md` and update this document so it describes the selected shape rather than pretending to be a universal MRL rule.
 
@@ -41,7 +41,7 @@ If a repository changes pack, record the decision in `decisions.md` and update t
 
 ## Core Intent
 
-Within this repository, the system should behave like a **DDD-inspired modular monolith**.
+Within this repository, the system should behave like a **polyglot client/server system with explicit runtime boundaries**.
 
 It should prefer:
 
@@ -51,59 +51,63 @@ It should prefer:
 - deterministic local simulation over distributed complexity
 - testability and inspectability over premature realism
 
-This project is a **refinement environment**, not a microservices platform.
+This project is a **refinement environment**, not a production microservices platform.
 
-That statement is local to this selected pack. MRL as a workflow does not require a modular monolith and can support multi-process or multi-runtime systems when the model requires them.
+That statement is local to this selected pack. MRL as a workflow does not require one language or one process and can support single-runtime or multi-runtime systems when the model requires them.
 
 ---
 
 ## Architectural Style For This Pack
 
-The project follows a layered approach:
+The project follows an explicit client/server split:
 
 ```text
-Tests -----------------> Use Cases -----------------> Domain Models
-Interfaces/API Facade -> Use Cases -----------------> Repositories (ports)
-                                          ---------> Message Bus (port)
-                                          ---------> External APIs (ports)
+Browser client -----------------------> HTTP API facade
+                                      -> application use cases
+                                      -> domain model
+                                      -> repositories and generators (ports)
 ```
 
 A more explicit view:
 
 ```text
-src/app/
-  domain/
-    models/
-    services/
-    events/
-    value_objects/
-
-  application/
-    use_cases/
-    ports/
-    dto/
-
-  interfaces/
-    api_facade/
-
-  infrastructure/
-    sqlite/
-    repositories/
-    message_bus/
-    fakes/
-    clock/
-    ids/
+src/
+  client/
+  server/
+  shared_contracts/
 
 tests/
-  unit/
+  client/
+  server/
   integration/
+  contracts/
 ```
 
 This is a pack-specific example, not a required layout for every MRL repository.
 
 ### Layer responsibilities
 
-#### 1. Tests
+#### 1. Client runtime
+The client runtime should stay thin and browser-oriented.
+
+It should:
+
+- collect user intent
+- persist browser-local continuity tokens when needed
+- call explicit backend contracts
+- render state without owning core identity rules
+
+#### 2. Server application
+The server contains the executable business behavior for identity flows.
+
+It should expose:
+
+- API handlers or facade adapters
+- application use cases
+- domain models and value objects
+- infrastructure adapters for persistence and token generation
+
+#### 3. Tests
 Tests are the main executable specification.
 
 They should validate:
@@ -111,71 +115,19 @@ They should validate:
 - domain invariants
 - use-case behavior
 - persistence boundaries
-- event/message emission
-- frontend-derived workflows
+- browser-derived workflows
+- shared contract stability when relevant
 
-#### 2. Application layer
-The application layer contains **use cases**.
+#### 4. Shared contracts
+When the client and server need shared request or response shapes, keep those boundaries explicit.
 
-A use case:
+Shared contracts may include:
 
-- receives an intention/request
-- loads domain objects through repositories
-- coordinates domain behavior
-- calls services when needed
-- persists resulting state
-- publishes domain/integration messages when needed
-- returns a result DTO
+- request and response schemas
+- API examples
+- event or message contracts when introduced later
 
-A use case should **not** contain raw SQL, HTTP details, or framework-specific logic.
-
-#### 3. Domain layer
-The domain layer contains the business model.
-
-It should include:
-
-- entities
-- aggregates
-- value objects
-- domain services
-- domain events
-
-The domain layer is where invariants and rules live.
-
-Examples:
-
-- order status transitions
-- inventory constraints
-- checkout eligibility
-- cart-to-order conversion rules
-- return eligibility constraints
-
-The domain should avoid direct dependency on SQLite, HTTP clients, real queues mechanisms, or UI concerns.
-
-#### 4. Interfaces layer
-The interface layer exposes use cases in a convenient shape.
-
-For this project, an **API facade** is acceptable as a boundary adapter. It can:
-
-- translate frontend-like requests into use-case inputs
-- compose response DTOs
-- simulate endpoints if needed
-
-This layer should stay thin.
-
-#### 5. Infrastructure layer
-Infrastructure implements ports required by the application/domain.
-
-Examples:
-
-- SQLite repositories
-- SQLite-backed message bus
-- in-memory message bus
-- local fake external APIs
-- test clocks
-- ID generators
-
-Infrastructure exists to support the model, not define it.
+Do not hide runtime boundaries behind implicit shared state.
 
 ---
 

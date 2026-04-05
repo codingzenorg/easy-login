@@ -132,3 +132,31 @@ Keep the whole repository under one permissive license. This was rejected becaus
 
 ### Notes
 When a future file is clearly part of the `easy-login` artifact set, prefer `MPL-2.0`. When it is clearly reusable MRL framework or starter material, keep it under `MIT` unless a later decision says otherwise.
+
+## DEC-0005 - Adopt Polyglot Client Server As The Active Pack
+
+- Date: 2026-04-05
+- Status: accepted
+- Owners: both
+
+### Context
+The extracted model and refined first slice require an explicit browser client plus backend service shape. The repository was still documenting `python_ddd_monolith` as the active pack because that was inherited from the starter.
+
+### Decision
+Adopt `polyglot_client_server` as the active implementation pack for `easy-login`.
+
+Current intended runtime direction:
+
+- Mithril browser client
+- Go backend service
+
+The `contacts` repository remains only an architecture reference. It does not define the `easy-login` domain model.
+
+### Consequences
+The repository can now build the first guest-identity slice without hidden drift from the documented architecture baseline. Runtime boundaries become explicit earlier, and future slices should continue to treat client-server contracts as first-class artifacts.
+
+### Alternatives considered
+Keep the Python modular-monolith pack as the active baseline while implementing a Go server and Mithril client anyway. This was rejected because it would hide a real architectural change and make future refinement less trustworthy.
+
+### Notes
+This decision does not require copying the exact folder layout or libraries from `contacts`. It only makes the polyglot client/server model explicit as the current direction.
