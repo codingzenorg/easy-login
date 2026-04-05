@@ -47,3 +47,35 @@ For manual local validation during future slices:
 This keeps the current browser client and Go backend in a fast local feedback loop while preserving the same API contracts used by automated tests.
 
 When running frontend install or build commands in automation or manual validation, prefer the Node version pinned in the repository `.nvmrc`. Running the client without `nvm use` may trigger avoidable engine-version warnings.
+
+### Local Test Recipe
+
+Backend terminal:
+
+```bash
+cd src/server
+air
+```
+
+Frontend terminal:
+
+```bash
+cd src/client
+cp .env.example .env
+nvm use
+npm install
+npm run dev
+```
+
+Default local ports:
+
+- backend with `air`: `http://localhost:8081`
+- frontend with Vite dev server: `http://localhost:5173`
+
+Suggested manual checks:
+
+- create a guest identity
+- claim it with a recovery passphrase
+- remove the stored device token in browser storage or open a different browser
+- recover the claimed identity with the same passphrase
+- confirm the returned identity keeps the same `player_id`
