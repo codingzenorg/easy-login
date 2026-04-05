@@ -31,3 +31,12 @@ Primary validation should come from Go tests covering:
 - explicit not-found on unknown device token
 - durable resume from the same SQLite database after store recreation
 - health and readiness endpoints
+
+## Local Validation Loop
+
+For manual local validation during future slices:
+
+- run the backend from `src/server` with `air`
+- run the frontend from `src/client` with `npm run dev`
+
+This keeps the current browser client and Go backend in a fast local feedback loop while preserving the same API contracts used by automated tests.

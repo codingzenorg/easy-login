@@ -10,3 +10,5 @@ runs/
 .codex-session
 .notes
 .DS_Store
+src/server/data/
+src/server/tmp/
