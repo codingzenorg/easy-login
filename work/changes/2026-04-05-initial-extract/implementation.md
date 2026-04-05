@@ -39,6 +39,8 @@ Primary validation should come from Go tests covering:
 For manual local validation during future slices:
 
 - run the backend from `src/server` with `air`
-- run the frontend from `src/client` with `npm run dev`
+- run the frontend from `src/client` with `nvm use` first, then `npm run dev`
 
 This keeps the current browser client and Go backend in a fast local feedback loop while preserving the same API contracts used by automated tests.
+
+When running frontend install or build commands in automation or manual validation, prefer the Node version pinned in the repository `.nvmrc`. Running the client without `nvm use` may trigger avoidable engine-version warnings.
