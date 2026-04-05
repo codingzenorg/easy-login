@@ -2,17 +2,17 @@
 
 ## Implemented Scope
 
-The first build slice now includes:
+The first two build slices now include:
 
 - Go backend service for guest identity creation and resume
-- in-memory repositories for players and device registrations
+- SQLite-backed repositories for players and device registrations
 - health and readiness endpoints for future Docker Swarm exposure
 - minimal Mithril browser client that stores the device token in local storage
 - explicit shared contract examples for guest creation and resume
+- backend database configuration through `SQLITE_PATH`
 
 ## Deliberate Limits
 
-- persistence is in memory for this first slice
 - claim and recovery flows are not implemented
 - no ranking integration exists yet
 - display-name validation is limited to non-empty trimmed input
@@ -29,4 +29,5 @@ Primary validation should come from Go tests covering:
 - invalid empty display names
 - resume by known device token
 - explicit not-found on unknown device token
+- durable resume from the same SQLite database after store recreation
 - health and readiness endpoints

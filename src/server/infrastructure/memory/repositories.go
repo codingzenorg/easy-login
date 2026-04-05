@@ -44,6 +44,11 @@ func (r *DeviceRegistrationRepository) Save(_ context.Context, registration doma
 	return nil
 }
 
+func (r *DeviceRegistrationRepository) SaveRegistration(_ context.Context, registration domain.DeviceRegistration) error {
+	r.registrations[registration.DeviceToken] = registration
+	return nil
+}
+
 func (r *DeviceRegistrationRepository) GetByDeviceToken(_ context.Context, deviceToken string) (domain.DeviceRegistration, error) {
 	registration, ok := r.registrations[deviceToken]
 	if !ok {

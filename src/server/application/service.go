@@ -15,8 +15,12 @@ type PlayerRepository interface {
 }
 
 type DeviceRegistrationRepository interface {
-	Save(ctx context.Context, registration domain.DeviceRegistration) error
+	SaveRegistration(ctx context.Context, registration domain.DeviceRegistration) error
 	GetByDeviceToken(ctx context.Context, deviceToken string) (domain.DeviceRegistration, error)
+}
+
+type GuestIdentityPersistence interface {
+	SaveGuestIdentity(ctx context.Context, player domain.Player, registration domain.DeviceRegistration) error
 }
 
 type IDGenerator interface {
@@ -80,12 +84,18 @@ func (s Service) CreateGuestIdentity(ctx context.Context, input CreateGuestIdent
 		PlayerID:    player.PlayerID,
 	}
 
-	if err := s.players.Save(ctx, player); err != nil {
-		return IdentityView{}, err
-	}
+	if persistence, ok := s.players.(GuestIdentityPersistence); ok {
+		if err := persistence.SaveGuestIdentity(ctx, player, registration); err != nil {
+			return IdentityView{}, err
+		}
+	} else {
+		if err := s.players.Save(ctx, player); err != nil {
+			return IdentityView{}, err
+		}
 
-	if err := s.devices.Save(ctx, registration); err != nil {
-		return IdentityView{}, err
+		if err := s.devices.SaveRegistration(ctx, registration); err != nil {
+			return IdentityView{}, err
+		}
 	}
 
 	return IdentityView{

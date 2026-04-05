@@ -6,19 +6,29 @@ import (
 	"os"
 
 	"easy-login/server/application"
-	"easy-login/server/infrastructure/memory"
+	"easy-login/server/infrastructure/sqlite"
 	"easy-login/server/infrastructure/system"
 	httpapi "easy-login/server/interfaces/http"
 )
 
 func main() {
-	playerRepository := memory.NewPlayerRepository()
-	deviceRepository := memory.NewDeviceRegistrationRepository()
+	databasePath := os.Getenv("SQLITE_PATH")
+	db, err := sqlite.OpenDatabase(databasePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	store, err := sqlite.NewStore(db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	generator := system.RandomHexGenerator{}
 
 	service := application.NewService(
-		playerRepository,
-		deviceRepository,
+		store,
+		store,
 		generator,
 		generator,
 	)
