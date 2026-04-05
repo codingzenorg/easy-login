@@ -54,6 +54,7 @@ Then start the loop:
 4. run `egd` to review the built behavior
 
 The semantic placeholders in `docs/semantics/` are intentionally empty. They are meant to be filled by the `extract` phase, not by copying domain content from this starter.
+Preserve original evidence in `work/sources/` before extraction or refinement artifacts are produced elsewhere.
 
 ---
 
@@ -67,6 +68,8 @@ The semantic placeholders in `docs/semantics/` are intentionally empty. They are
 /docs/evaluation/          # expectation-gap evaluation guidance
 /docs/semantics/           # domain-specific meaning created by extract
 /docs/slices/              # one slice document per increment
+/work/sources/             # canonical folder for curated raw evidence and original source material
+/work/changes/             # request, impact, and implementation artifacts
 /src/                      # implementation root shaped by the selected pack
 /tests/                    # executable specification
 ```
@@ -79,4 +82,5 @@ The semantic placeholders in `docs/semantics/` are intentionally empty. They are
 - Keep domain specifics out of the starter and in the adopting repository.
 - Keep the MRL loop generic and move language or architecture assumptions into packs.
 - Make licensing an explicit adoption choice; the starter can be reused under one license or adapted into a split-license repository when process material and implementation code need different terms.
+- Treat `work/` as repository memory, not scratch space; preserve original evidence in `work/sources/` before downstream artifacts are created.
 - Prefer one small slice over broad scaffolding.

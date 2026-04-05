@@ -63,6 +63,10 @@ project_root/
       domain_background_knowledge.md
     slices/
 
+  work/
+    sources/
+    changes/
+
   pyproject.toml               # only when a Python pack uses it
   package.json                 # only when a JavaScript/TypeScript pack uses it
   go.mod                       # only when a Go pack uses it
@@ -128,6 +132,15 @@ Contains business-language material used during analysis and evaluation.
 
 - `docs/semantics/model_hypothesis.md`: analysis and build guidance
 - `docs/semantics/domain_background_knowledge.md`: expectation-review context
+
+### `work/`
+Contains tracked working artifacts that preserve loop traceability without promoting every intermediate artifact into `docs/`.
+
+- `work/sources/`: canonical folder for curated raw evidence and original source material
+- `work/changes/`: bounded request artifacts and phase-local handoff material tied to a specific change
+
+`work/` is repository memory, not personal scratch space.
+Preserve original evidence in `work/sources/` before extraction or refinement artifacts are produced elsewhere.
 
 ### `src/`
 Contains production code shaped by the selected pack.
