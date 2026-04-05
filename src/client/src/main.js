@@ -106,6 +106,35 @@ async function claimIdentity() {
   }
 }
 
+async function recoverIdentity() {
+  state.loading = true
+  state.error = ""
+
+  try {
+    const response = await fetch(`${state.apiBaseUrl}/identities/recover`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        recovery_passphrase: state.recoveryPassphrase,
+      }),
+    })
+
+    const body = await response.json()
+    if (!response.ok) {
+      throw new Error(body.error || "recovery failed")
+    }
+
+    state.identity = body
+    state.deviceToken = body.device_token
+    window.localStorage.setItem(storageKey, body.device_token)
+  } catch (error) {
+    state.error = error.message
+  } finally {
+    state.loading = false
+    m.redraw()
+  }
+}
+
 const App = {
   oninit() {
     void resumeIdentity()
@@ -138,6 +167,27 @@ const App = {
         ),
         state.deviceToken
           ? m("button.button.secondary", {disabled: state.loading, onclick: () => void resumeIdentity()}, "Resume from device token")
+          : null,
+        !state.deviceToken
+          ? [
+              m("label.label", {for: "recovery_passphrase"}, "Recover with passphrase"),
+              m("input.input", {
+                id: "recovery_passphrase",
+                value: state.recoveryPassphrase,
+                oninput: (event) => {
+                  state.recoveryPassphrase = event.target.value
+                },
+                placeholder: "moon-river-42",
+              }),
+              m(
+                "button.button.secondary",
+                {
+                  disabled: state.loading,
+                  onclick: () => void recoverIdentity(),
+                },
+                "Recover identity",
+              ),
+            ]
           : null,
         state.identity && state.identity.claim_status === "guest"
           ? [

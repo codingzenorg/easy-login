@@ -134,6 +134,48 @@ func TestClaimIdentityEndpoint(t *testing.T) {
 	}
 }
 
+func TestRecoverIdentityEndpoint(t *testing.T) {
+	handler := testHandler()
+
+	createRequest := httptest.NewRequest(http.MethodPost, "/identities/guest", bytes.NewBufferString(`{"display_name":"henrique"}`))
+	createRequest.Header.Set("Content-Type", "application/json")
+	createRecorder := httptest.NewRecorder()
+	handler.ServeHTTP(createRecorder, createRequest)
+
+	var created map[string]string
+	if err := json.Unmarshal(createRecorder.Body.Bytes(), &created); err != nil {
+		t.Fatalf("expected json response: %v", err)
+	}
+
+	claimRequest := httptest.NewRequest(http.MethodPost, "/identities/claim", bytes.NewBufferString(`{"device_token":"`+created["device_token"]+`","recovery_passphrase":"moon-river-42"}`))
+	claimRequest.Header.Set("Content-Type", "application/json")
+	claimRecorder := httptest.NewRecorder()
+	handler.ServeHTTP(claimRecorder, claimRequest)
+
+	request := httptest.NewRequest(http.MethodPost, "/identities/recover", bytes.NewBufferString(`{"recovery_passphrase":"moon-river-42"}`))
+	request.Header.Set("Content-Type", "application/json")
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", recorder.Code)
+	}
+
+	var body map[string]string
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("expected json response: %v", err)
+	}
+
+	if body["claim_status"] != "claimed" {
+		t.Fatalf("expected claimed status, got %q", body["claim_status"])
+	}
+
+	if body["device_token"] == "" {
+		t.Fatal("expected recovery to return a device token")
+	}
+}
+
 func TestOptionsPreflightReturnsNoContentForAllowedOrigin(t *testing.T) {
 	handler := testHandler()
 

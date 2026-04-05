@@ -13,6 +13,7 @@ var ErrIdentityAlreadyClaimed = errors.New("identity already claimed")
 type PlayerRepository interface {
 	Save(ctx context.Context, player domain.Player) error
 	GetByID(ctx context.Context, playerID string) (domain.Player, error)
+	GetByRecoveryPassphraseHash(ctx context.Context, recoveryPassphraseHash string) (domain.Player, error)
 }
 
 type DeviceRegistrationRepository interface {
@@ -45,6 +46,10 @@ type CreateGuestIdentityInput struct {
 
 type ClaimGuestIdentityInput struct {
 	DeviceToken        string
+	RecoveryPassphrase string
+}
+
+type RecoverClaimedIdentityInput struct {
 	RecoveryPassphrase string
 }
 
@@ -157,5 +162,38 @@ func (s Service) ClaimGuestIdentity(ctx context.Context, input ClaimGuestIdentit
 		PlayerID:    claimedPlayer.PlayerID,
 		DisplayName: claimedPlayer.DisplayName,
 		ClaimStatus: claimedPlayer.ClaimStatus,
+	}, nil
+}
+
+func (s Service) RecoverClaimedIdentity(ctx context.Context, input RecoverClaimedIdentityInput) (IdentityView, error) {
+	recoveryPassphraseHash, err := domain.HashRecoveryPassphrase(input.RecoveryPassphrase)
+	if err != nil {
+		return IdentityView{}, err
+	}
+
+	player, err := s.players.GetByRecoveryPassphraseHash(ctx, recoveryPassphraseHash)
+	if err != nil {
+		return IdentityView{}, ErrIdentityNotFound
+	}
+
+	deviceToken, err := s.tokenFactory.NewDeviceToken(ctx)
+	if err != nil {
+		return IdentityView{}, err
+	}
+
+	registration := domain.DeviceRegistration{
+		DeviceToken: deviceToken,
+		PlayerID:    player.PlayerID,
+	}
+
+	if err := s.devices.SaveRegistration(ctx, registration); err != nil {
+		return IdentityView{}, err
+	}
+
+	return IdentityView{
+		PlayerID:    player.PlayerID,
+		DisplayName: player.DisplayName,
+		ClaimStatus: player.ClaimStatus,
+		DeviceToken: deviceToken,
 	}, nil
 }

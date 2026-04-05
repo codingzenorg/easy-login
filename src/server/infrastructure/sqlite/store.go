@@ -143,6 +143,28 @@ func (s *Store) GetByID(ctx context.Context, playerID string) (domain.Player, er
 	return player, nil
 }
 
+func (s *Store) GetByRecoveryPassphraseHash(ctx context.Context, recoveryPassphraseHash string) (domain.Player, error) {
+	row := s.db.QueryRowContext(
+		ctx,
+		`SELECT player_id, display_name, claim_status, recovery_passphrase_hash
+		 FROM players
+		 WHERE recovery_passphrase_hash = ?
+		   AND claim_status = ?`,
+		recoveryPassphraseHash,
+		domain.ClaimStatusClaimed,
+	)
+
+	var player domain.Player
+	if err := row.Scan(&player.PlayerID, &player.DisplayName, &player.ClaimStatus, &player.RecoveryPassphraseHash); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Player{}, ErrNotFound
+		}
+		return domain.Player{}, err
+	}
+
+	return player, nil
+}
+
 func (s *Store) SaveDeviceRegistration(ctx context.Context, registration domain.DeviceRegistration) error {
 	_, err := s.db.ExecContext(
 		ctx,

@@ -207,3 +207,62 @@ func TestClaimGuestIdentityRejectsAlreadyClaimedIdentity(t *testing.T) {
 		t.Fatal("expected second claim to fail")
 	}
 }
+
+func TestRecoverClaimedIdentityReturnsStableIdentityAndNewDeviceToken(t *testing.T) {
+	service := application.NewService(
+		memory.NewPlayerRepository(),
+		memory.NewDeviceRegistrationRepository(),
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	created, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("expected guest identity creation to succeed: %v", err)
+	}
+
+	_, err = service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("expected claim to succeed: %v", err)
+	}
+
+	recovered, err := service.RecoverClaimedIdentity(context.Background(), application.RecoverClaimedIdentityInput{
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("expected recovery to succeed: %v", err)
+	}
+
+	if recovered.PlayerID != created.PlayerID {
+		t.Fatalf("expected recovery to preserve player id, got %q", recovered.PlayerID)
+	}
+
+	if recovered.ClaimStatus != domain.ClaimStatusClaimed {
+		t.Fatalf("expected claimed status after recovery, got %q", recovered.ClaimStatus)
+	}
+
+	if recovered.DeviceToken != "device-001" {
+		t.Fatalf("expected deterministic device token for recovery, got %q", recovered.DeviceToken)
+	}
+}
+
+func TestRecoverClaimedIdentityRejectsInvalidPassphrase(t *testing.T) {
+	service := application.NewService(
+		memory.NewPlayerRepository(),
+		memory.NewDeviceRegistrationRepository(),
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	_, err := service.RecoverClaimedIdentity(context.Background(), application.RecoverClaimedIdentityInput{
+		RecoveryPassphrase: "  ",
+	})
+	if err == nil {
+		t.Fatal("expected empty recovery passphrase to fail")
+	}
+}

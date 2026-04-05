@@ -44,17 +44,21 @@ func (p Player) Claim(recoveryPassphrase string) (Player, error) {
 		return Player{}, ErrIdentityAlreadyClaimed
 	}
 
-	normalized := strings.TrimSpace(recoveryPassphrase)
-	if normalized == "" {
-		return Player{}, ErrInvalidRecoveryPassphrase
-	}
-
 	p.ClaimStatus = ClaimStatusClaimed
-	p.RecoveryPassphraseHash = hashRecoveryPassphrase(normalized)
+	hash, err := HashRecoveryPassphrase(recoveryPassphrase)
+	if err != nil {
+		return Player{}, err
+	}
+	p.RecoveryPassphraseHash = hash
 	return p, nil
 }
 
-func hashRecoveryPassphrase(passphrase string) string {
+func HashRecoveryPassphrase(passphrase string) (string, error) {
+	normalized := strings.TrimSpace(passphrase)
+	if normalized == "" {
+		return "", ErrInvalidRecoveryPassphrase
+	}
+
 	sum := sha256.Sum256([]byte(passphrase))
-	return hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:]), nil
 }

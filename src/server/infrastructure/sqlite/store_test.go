@@ -211,3 +211,80 @@ func TestClaimedStatusPersistsAcrossStoreRecreation(t *testing.T) {
 		t.Fatalf("expected claimed status after restart, got %q", resumed.ClaimStatus)
 	}
 }
+
+func TestRecoveryPersistsDeviceRegistrationUsableByResume(t *testing.T) {
+	databasePath := filepath.Join(t.TempDir(), "recovery.db")
+
+	db, err := sqlite.OpenDatabase(databasePath)
+	if err != nil {
+		t.Fatalf("open sqlite database: %v", err)
+	}
+
+	store, err := sqlite.NewStore(db)
+	if err != nil {
+		t.Fatalf("create sqlite store: %v", err)
+	}
+
+	service := application.NewService(
+		store,
+		store,
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	created, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("create guest identity: %v", err)
+	}
+
+	_, err = service.ClaimGuestIdentity(context.Background(), application.ClaimGuestIdentityInput{
+		DeviceToken:        created.DeviceToken,
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("claim guest identity: %v", err)
+	}
+
+	recovered, err := service.RecoverClaimedIdentity(context.Background(), application.RecoverClaimedIdentityInput{
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err != nil {
+		t.Fatalf("recover claimed identity: %v", err)
+	}
+
+	resumed, err := service.ResumeIdentityFromDeviceToken(context.Background(), recovered.DeviceToken)
+	if err != nil {
+		t.Fatalf("resume recovered identity: %v", err)
+	}
+
+	if resumed.PlayerID != created.PlayerID {
+		t.Fatalf("expected resumed recovery to preserve player id, got %q", resumed.PlayerID)
+	}
+}
+
+func TestUnclaimedGuestIdentityCannotBeRecovered(t *testing.T) {
+	store := openTestStore(t, "unclaimed.db")
+
+	service := application.NewService(
+		store,
+		store,
+		fixedPlayerIDGenerator{value: "player-001"},
+		fixedDeviceTokenGenerator{value: "device-001"},
+	)
+
+	_, err := service.CreateGuestIdentity(context.Background(), application.CreateGuestIdentityInput{
+		DisplayName: "henrique",
+	})
+	if err != nil {
+		t.Fatalf("create guest identity: %v", err)
+	}
+
+	_, err = service.RecoverClaimedIdentity(context.Background(), application.RecoverClaimedIdentityInput{
+		RecoveryPassphrase: "moon-river-42",
+	})
+	if err == nil {
+		t.Fatal("expected unclaimed identity recovery to fail")
+	}
+}

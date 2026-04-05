@@ -31,6 +31,16 @@ func (r *PlayerRepository) GetByID(_ context.Context, playerID string) (domain.P
 	return player, nil
 }
 
+func (r *PlayerRepository) GetByRecoveryPassphraseHash(_ context.Context, recoveryPassphraseHash string) (domain.Player, error) {
+	for _, player := range r.players {
+		if player.RecoveryPassphraseHash == recoveryPassphraseHash && player.ClaimStatus == domain.ClaimStatusClaimed {
+			return player, nil
+		}
+	}
+
+	return domain.Player{}, ErrNotFound
+}
+
 type DeviceRegistrationRepository struct {
 	registrations map[string]domain.DeviceRegistration
 }
