@@ -106,3 +106,29 @@ Keep `.codex` as a first-class part of the repository workflow immediately. This
 
 ### Notes
 If future evidence shows that MRL depends on stable capabilities from a specific AI tool, record a follow-up decision describing the required coupling, why generic artifacts were insufficient, and which tool-specific assets should become part of the repository.
+
+## DEC-0004 - License MRL-Created Project Artifacts Under MPL-2.0
+
+- Date: 2026-04-05
+- Status: accepted
+- Owners: both
+
+### Context
+This repository starts from the MRL starter, but it is now producing project-specific artifacts for `easy-login`. The repository needs to keep the reusable MRL framework and starter material distinct from the artifacts created by the MRL loop for this project.
+
+### Decision
+Use a split-license model:
+
+- keep reusable MRL framework and starter material under `MIT`
+- license project-specific artifacts created through the `easy-login` MRL process under `MPL-2.0`
+
+The root `LICENSE` defines the scope. The full license texts live in `LICENSES/MIT.txt` and `LICENSES/MPL-2.0.txt`.
+
+### Consequences
+The repository preserves the reusable status of the MRL framework while making project-specific semantic artifacts, slices, code, tests, and other produced assets file-level copyleft under `MPL-2.0`. Future contributors need to keep the scope boundary clear when adding new files.
+
+### Alternatives considered
+Keep the whole repository under one permissive license. This was rejected because it would blur the distinction between reusable MRL process material and project artifacts produced for `easy-login`.
+
+### Notes
+When a future file is clearly part of the `easy-login` artifact set, prefer `MPL-2.0`. When it is clearly reusable MRL framework or starter material, keep it under `MIT` unless a later decision says otherwise.

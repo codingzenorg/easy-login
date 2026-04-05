@@ -1,21 +1,45 @@
-MIT License
+Licensing for this repository is split by artifact type.
 
-Copyright (c) 2026 wastingnotime.org
+## MPL-2.0
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Project-specific artifacts created through the MRL process are licensed under the
+Mozilla Public License 2.0.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This includes:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+- `work/`
+- `docs/semantics/`
+- `docs/slices/`
+- `src/`
+- `tests/`
+- project-specific implementation and runtime assets added later
+
+The full license text is available at `LICENSES/MPL-2.0.txt`.
+
+## MIT
+
+The reusable MRL framework, starter material, and process guidance remain under
+the MIT License.
+
+This includes:
+
+- `readme.md`
+- `AGENTS.md`
+- `architecture.md`
+- `groundrules.md`
+- `decisions.md`
+- `docs/operating/`
+- `docs/building/`
+- `docs/evaluation/`
+- `docs/packs/`
+- `.agents/skills/`
+
+The full license text is available at `LICENSES/MIT.txt`.
+
+## Rule of interpretation
+
+When a file is clearly project-specific and produced as part of the `easy-login`
+MRL loop, treat it as `MPL-2.0` unless that file states otherwise.
+
+When a file is clearly reusable MRL process or starter material, treat it as
+`MIT` unless that file states otherwise.
