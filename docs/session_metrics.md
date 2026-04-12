@@ -91,3 +91,34 @@ They are operational hints for the shape of the work, not truth about the value 
 * productivity is interpreted cumulatively from repository start through `2026-04-05`
 * `git log --until 2026-04-05` shows four `feat:` commits in `easy-login`, so four delivered slices were counted for that cumulative window
 * the same cumulative history shows ten `docs:` commits, so the measurement includes substantial repository-shaping and refinement work alongside slice delivery
+
+---
+
+## Session - 20260412
+
+### Raw
+
+* total_tokens: 1094613
+* input_tokens: 1022960
+* cached_tokens: 20830464
+* output_tokens: 71653
+* reasoning_tokens: 9575
+
+### Derived
+
+* output_efficiency: 6.55%
+* reasoning_efficiency: 13.36%
+* cache_ratio: 20.36x
+
+### Productivity
+
+* slices_applied: 4
+* tokens_per_slice: 273653.25
+* docs_commits: 11
+
+### Notes
+
+* historical measurement recorded from `easy-login`
+* productivity is interpreted cumulatively from repository start through `2026-04-12`
+* `git log --until 2026-04-12` still shows four `feat:` commits in `easy-login`, so the delivered slice count is unchanged from the previous snapshot
+* the same cumulative history now shows eleven `docs:` commits, so this measurement reflects another documentation-oriented increment on top of the already delivered slices
